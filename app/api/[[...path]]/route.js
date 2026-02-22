@@ -19,7 +19,8 @@ export async function OPTIONS() {
 }
 
 // Main route handler
-async function handleRoute(request, { params }) {
+async function handleRoute(request, context) {
+  const params = await context.params;
   const { path = [] } = params;
   const route = `/${path.join('/')}`;
   const method = request.method;
