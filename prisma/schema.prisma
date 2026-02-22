@@ -1,0 +1,252 @@
+// Sensory Smart Navigation System - Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with authentication
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  googleId  String?  @unique
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  sensoryProfile SensoryProfile?
+  locationTags   LocationTag[]
+  communityRatings CommunityRating[]
+  emergencyLogs    EmergencyLog[]
+  routes           Route[]
+  
+  @@index([email])
+}
+
+// User's sensory sensitivity profile
+model SensoryProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Sensitivity levels (1-10)
+  noiseSensitivity   Int  @default(5)
+  lightSensitivity   Int  @default(5)
+  crowdTolerance     Int  @default(5)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+// Location tags submitted by users
+model LocationTag {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Location details
+  latitude    Float
+  longitude   Float
+  placeName   String?
+  
+  // Sensory levels (1-10)
+  noiseLevel     Int
+  lightingLevel  Int
+  crowdDensity   Int
+  
+  // Additional fields
+  timeOfDay   String  // Morning, Afternoon, Evening, Night
+  environment String  // Indoor, Outdoor
+  notes       String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([latitude, longitude])
+  @@index([userId])
+  @@index([timeOfDay])
+}
+
+// Community ratings aggregated by location and time
+model CommunityRating {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Location details
+  latitude    Float
+  longitude   Float
+  placeName   String?
+  
+  // Time slot categorization
+  timeSlot    String  // Morning, Afternoon, Evening, Night
+  
+  // Average ratings
+  avgNoise    Float
+  avgLight    Float
+  avgCrowd    Float
+  
+  // Number of ratings contributing to this average
+  ratingCount Int     @default(1)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([latitude, longitude])
+  @@index([timeSlot])
+}
+
+// Aggregated data combining user tags and external data
+model AggregatedData {
+  id        String   @id @default(uuid())
+  
+  // Location details
+  latitude    Float
+  longitude   Float
+  placeName   String?
+  
+  // Time slot
+  timeSlot    String  // Morning, Afternoon, Evening, Night
+  
+  // Aggregated sensory data
+  avgNoise    Float
+  avgLight    Float
+  avgCrowd    Float
+  
+  // External data integration
+  trafficLevel    Float?  // From traffic API
+  eventDensity    Float?  // From events data
+  
+  // SLI Score (Sensory Load Index)
+  sliScore        Float
+  riskLevel       String  // Low, Medium, High
+  
+  // Zone classification
+  zoneType        String?  // Calm, Moderate, Busy, Overwhelming
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([latitude, longitude])
+  @@index([timeSlot])
+  @@index([riskLevel])
+}
+
+// User generated and optimized routes
+model Route {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Origin and destination
+  originLat      Float
+  originLng      Float
+  originName     String?
+  
+  destinationLat Float
+  destinationLng Float
+  destinationName String?
+  
+  // Route data
+  routePath      String  @db.Text  // JSON string of polyline coordinates
+  distance       Float   // in kilometers
+  duration       Int     // in minutes
+  
+  // Sensory metrics
+  avgSliScore    Float
+  riskLevel      String  // Low, Medium, High
+  
+  // Route type
+  routeType      String  // Calm, Standard, Fast
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Recommendations for best times to visit locations
+model Recommendation {
+  id        String   @id @default(uuid())
+  
+  // Location details
+  latitude    Float
+  longitude   Float
+  placeName   String
+  
+  // Best hours data (JSON string with hourly scores)
+  bestHours   String  @db.Text
+  
+  // Summary
+  bestTimeSlot    String  // Morning, Afternoon, Evening, Night
+  avgSliScore     Float
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([latitude, longitude])
+}
+
+// Emergency support logs
+model EmergencyLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Location when emergency was triggered
+  latitude    Float
+  longitude   Float
+  
+  // Emergency details
+  triggerReason   String?  // Overload, High Anxiety, etc.
+  currentSliScore Float?
+  
+  // Suggested safe spaces (JSON string)
+  suggestedSpaces String?  @db.Text
+  
+  // Timestamps
+  triggeredAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([triggeredAt])
+}
+
+// Quiet spaces database for emergency support
+model QuietSpace {
+  id        String   @id @default(uuid())
+  
+  // Location details
+  latitude    Float
+  longitude   Float
+  name        String
+  type        String  // Park, Library, Cafe, Indoor Space
+  
+  // Sensory characteristics
+  avgNoise    Float
+  avgLight    Float
+  avgCrowd    Float
+  
+  // Description
+  description String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([latitude, longitude])
+  @@index([type])
+}
