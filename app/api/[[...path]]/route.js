@@ -168,6 +168,18 @@ async function handleRoute(request, context) {
       const body = await request.json();
       const { noiseSensitivity, lightSensitivity, crowdTolerance } = body;
 
+      // Validate required fields
+      if (
+        noiseSensitivity === undefined || noiseSensitivity === null ||
+        lightSensitivity === undefined || lightSensitivity === null ||
+        crowdTolerance === undefined || crowdTolerance === null
+      ) {
+        return handleCORS(NextResponse.json(
+          { error: 'All sensitivity values (noiseSensitivity, lightSensitivity, crowdTolerance) are required' },
+          { status: 400 }
+        ));
+      }
+
       // Validate input (1-10 range)
       if (
         noiseSensitivity < 1 || noiseSensitivity > 10 ||
