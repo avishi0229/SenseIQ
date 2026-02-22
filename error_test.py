@@ -5,6 +5,7 @@ Quick test to verify error handling is working correctly
 
 import requests
 import json
+import time
 
 BASE_URL = "https://sensory-safe.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
@@ -14,7 +15,7 @@ def test_error_scenarios():
     
     # Get a valid token first
     register_response = requests.post(f"{API_BASE}/auth/register", json={
-        "email": f"errortest_{int(requests.time.time() * 1000)}@example.com",
+        "email": f"errortest_{int(time.time() * 1000)}@example.com",
         "password": "TestPass123!",
         "name": "Error Test User"
     })
